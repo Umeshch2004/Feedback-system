@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}AI Feedback Suggestions - Feedback System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-robot me-2"></i>AI Feedback Assistant</h2>
+        <p class="text-muted">Get AI-powered suggestions for writing better feedback</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Generate Feedback Suggestions
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="aiSuggestionsForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="employee_role" class="form-label">Employee Role</label>
+                                <select class="form-select" id="employee_role" name="employee_role" required>
+                                    <option value="">Select role...</option>
+                                    <option value="Software Developer">Software Developer</option>
+                                    <option value="Project Manager">Project Manager</option>
+                                    <option value="Designer">Designer</option>
+                                    <option value="Marketing Specialist">Marketing Specialist</option>
+                                    <option value="Sales Representative">Sales Representative</option>
+                                    <option value="Customer Support">Customer Support</option>
+                                    <option value="Data Analyst">Data Analyst</option>
+                                    <option value="HR Specialist">HR Specialist</option>
+                                    <option value="Team Lead">Team Lead</option>
+                                    <option value="Junior Developer">Junior Developer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="performance_area" class="form-label">Focus Area</label>
+                                <select class="form-select" id="performance_area" name="performance_area" required>
+                                    <option value="">Select focus area...</option>
+                                    <option value="Communication Skills">Communication Skills</option>
+                                    <option value="Technical Skills">Technical Skills</option>
+                                    <option value="Leadership">Leadership</option>
+                                    <option value="Teamwork">Teamwork</option>
+                                    <option value="Problem Solving">Problem Solving</option>
+                                    <option value="Time Management">Time Management</option>
+                                    <option value="Initiative">Initiative</option>
+                                    <option value="Quality of Work">Quality of Work</option>
+                                    <option value="Adaptability">Adaptability</option>
+                                    <option value="Client Relations">Client Relations</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-magic me-2"></i>Generate AI Suggestions
+                    </button>
+                </form>
+                
+                <div id="suggestions-result" class="mt-4" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>AI Generated Suggestions:</strong>
+                    </div>
+                    <div id="suggestions-content" class="p-3 bg-light rounded">
+                        <!-- AI suggestions will appear here -->
+                    </div>
+                </div>
+                
+                <div id="loading" class="text-center mt-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Generating suggestions...</span>
+                    </div>
+                    <p class="mt-2">AI is generating suggestions...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>AI Tools
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('feedback_analyzer') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-line me-2"></i>Feedback Analyzer
+                    </a>
+                    <a href="{{ url_for('performance_insights') }}" class="btn btn-outline-success">
+                        <i class="fas fa-brain me-2"></i>Performance Insights
+                    </a>
+                    <a href="{{ url_for('feedback_improver') }}" class="btn btn-outline-info">
+                        <i class="fas fa-edit me-2"></i>Improve Writing
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled small">
+                    <li><i class="fas fa-check text-success me-2"></i>Be specific and actionable</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Focus on behaviors, not personality</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Provide examples when possible</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Balance strengths with growth areas</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Use constructive language</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('aiSuggestionsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('suggestions-result');
+    
+    loading.style.display = 'block';
+    result.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/ai-suggestions', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('suggestions-content').innerHTML = data.suggestions.replace(/\n/g, '<br>');
+            result.style.display = 'block';
+        } else {
+            alert('Failed to generate suggestions: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error generating suggestions: ' + error.message);
+    } finally {
+        loading.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

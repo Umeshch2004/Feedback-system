@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Request Feedback - Feedback System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-hand-paper me-2"></i>Request Feedback</h2>
+        <p class="text-muted">Proactively request feedback from your manager</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-paper-plane me-2"></i>Request Feedback from Manager
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if employee.manager %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This request will be sent to your manager: <strong>{{ employee.manager.username }}</strong>
+                </div>
+                
+                <form method="POST" id="requestForm">
+                    <div class="mb-3">
+                        <label for="focus_area" class="form-label">Specific Focus Area (Optional)</label>
+                        <select class="form-select" id="focus_area" name="focus_area">
+                            <option value="">General feedback</option>
+                            <option value="communication">Communication Skills</option>
+                            <option value="technical">Technical Performance</option>
+                            <option value="leadership">Leadership & Initiative</option>
+                            <option value="teamwork">Teamwork & Collaboration</option>
+                            <option value="project_management">Project Management</option>
+                            <option value="problem_solving">Problem Solving</option>
+                            <option value="time_management">Time Management</option>
+                            <option value="quality">Quality of Work</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="specific_request" class="form-label">Specific Questions or Areas (Optional)</label>
+                        <textarea class="form-control" id="specific_request" name="specific_request" rows="3" 
+                                  placeholder="Any specific areas you'd like feedback on? Recent projects or situations you'd like to discuss?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="normal">Normal</option>
+                            <option value="high">High (1-on-1 meeting, performance review, etc.)</option>
+                            <option value="low">Low (whenever convenient)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('employee_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Send Request
+                        </button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Manager Assigned</h5>
+                    <p class="text-muted">You don't have a manager assigned to your account. Contact HR to get this set up.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Previous Requests
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if feedback_requests %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date Requested</th>
+                                <th>Focus Area</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Response Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for request in feedback_requests %}
+                            <tr>
+                                <td>{{ request.created_at.strftime('%m/%d/%Y') }}</td>
+                                <td>
+                                    {% if request.focus_area %}
+                                    <span class="badge bg-secondary">{{ request.focus_area.replace('_', ' ').title() }}</span>
+                                    {% else %}
+                                    General
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if request.priority == 'high' else 'warning' if request.priority == 'normal' else 'secondary' }}">
+                                        {{ request.priority.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if request.status == 'completed' else 'info' if request.status == 'in_progress' else 'secondary' }}">
+                                        {{ request.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if request.completed_at %}
+                                    {{ request.completed_at.strftime('%m/%d/%Y') }}
+                                    {% else %}
+                                    <span class="text-muted">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No previous feedback requests</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

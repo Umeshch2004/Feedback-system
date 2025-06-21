@@ -1,8 +1,9 @@
 from flask import render_template, request, redirect, url_for, session, flash, jsonify
 from app import app, db
-from models import User, Feedback
+from models import User, Feedback, FeedbackRequest
 from datetime import datetime
 from sqlalchemy import func
+from ai_utils import analyze_feedback_sentiment, generate_feedback_suggestions, extract_smart_tags, generate_performance_insights, improve_feedback_writing
 
 @app.route('/')
 def index():
@@ -247,3 +248,207 @@ def sentiment_data():
     }
     
     return jsonify(result)
+
+# AI-powered routes
+@app.route('/ai/suggestions')
+def ai_suggestions():
+    if 'user_id' not in session or session.get('role') != 'manager':
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    return render_template('ai_suggestions.html')
+
+@app.route('/ai/analyzer')
+def feedback_analyzer():
+    if 'user_id' not in session or session.get('role') != 'manager':
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    return render_template('feedback_analyzer.html')
+
+@app.route('/ai/insights')
+def performance_insights():
+    if 'user_id' not in session:
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    
+    team_members = []
+    if session.get('role') == 'manager':
+        manager = User.query.get(session['user_id'])
+        team_members = User.query.filter_by(manager_id=manager.id).all()
+    
+    return render_template('performance_insights.html', team_members=team_members)
+
+@app.route('/ai/improver')
+def feedback_improver():
+    if 'user_id' not in session or session.get('role') != 'manager':
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    return render_template('feedback_improver.html')
+
+# AI API endpoints
+@app.route('/api/ai-suggestions', methods=['POST'])
+def api_ai_suggestions():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+    
+    try:
+        employee_role = request.form.get('employee_role')
+        performance_area = request.form.get('performance_area')
+        
+        suggestions = generate_feedback_suggestions(employee_role, performance_area)
+        
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/analyze-feedback', methods=['POST'])
+def api_analyze_feedback():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+    
+    try:
+        strengths_text = request.form.get('strengths_text')
+        areas_text = request.form.get('areas_text')
+        
+        sentiment, confidence, reasoning = analyze_feedback_sentiment(strengths_text, areas_text)
+        
+        # Extract smart tags
+        combined_text = f"{strengths_text} {areas_text}"
+        tags = extract_smart_tags(combined_text)
+        
+        return jsonify({
+            'success': True,
+            'sentiment': sentiment,
+            'confidence': confidence,
+            'reasoning': reasoning,
+            'tags': tags
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/performance-insights', methods=['POST'])
+def api_performance_insights():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+    
+    try:
+        data = request.get_json()
+        employee_id = data.get('employee_id')
+        
+        user = User.query.get(session['user_id'])
+        employee = User.query.get(employee_id)
+        
+        # Check permissions
+        if user.role == 'manager' and employee.manager_id != user.id:
+            return jsonify({'success': False, 'error': 'Access denied'})
+        elif user.role == 'employee' and employee_id != user.id:
+            return jsonify({'success': False, 'error': 'Access denied'})
+        
+        # Get feedback history
+        feedback_list = Feedback.query.filter_by(employee_id=employee_id).order_by(Feedback.created_at.desc()).all()
+        
+        # Prepare data for AI analysis
+        feedback_history = []
+        timeline_data = {'dates': [], 'scores': []}
+        sentiment_counts = {'positive': 0, 'neutral': 0, 'negative': 0}
+        
+        for feedback in feedback_list:
+            feedback_history.append({
+                'date': feedback.created_at.strftime('%Y-%m-%d'),
+                'sentiment': feedback.sentiment,
+                'strengths': feedback.strengths,
+                'areas': feedback.areas_to_improve
+            })
+            
+            timeline_data['dates'].append(feedback.created_at.strftime('%m/%d'))
+            # Convert sentiment to score (positive=5, neutral=3, negative=1)
+            score = 5 if feedback.sentiment == 'positive' else 3 if feedback.sentiment == 'neutral' else 1
+            timeline_data['scores'].append(score)
+            
+            sentiment_counts[feedback.sentiment] += 1
+        
+        # Generate AI insights
+        insights = generate_performance_insights(feedback_history)
+        
+        # Calculate metrics
+        total_feedback = len(feedback_list)
+        avg_sentiment = max(sentiment_counts, key=sentiment_counts.get) if total_feedback > 0 else 'neutral'
+        
+        # Determine trend
+        if len(timeline_data['scores']) >= 2:
+            recent_avg = sum(timeline_data['scores'][-3:]) / min(3, len(timeline_data['scores']))
+            older_avg = sum(timeline_data['scores'][:-3]) / max(1, len(timeline_data['scores']) - 3) if len(timeline_data['scores']) > 3 else recent_avg
+            improvement_trend = 'Improving' if recent_avg > older_avg else 'Declining' if recent_avg < older_avg else 'Stable'
+        else:
+            improvement_trend = 'Insufficient Data'
+        
+        # Extract growth areas from recent feedback
+        growth_areas = []
+        for feedback in feedback_list[:5]:  # Last 5 feedback items
+            if feedback.tags:
+                growth_areas.extend([tag.strip() for tag in feedback.tags.split(',')])
+        growth_areas = list(set(growth_areas))[:6]  # Unique tags, max 6
+        
+        return jsonify({
+            'success': True,
+            'insights': insights,
+            'metrics': {
+                'total_feedback': total_feedback,
+                'avg_sentiment': avg_sentiment,
+                'improvement_trend': improvement_trend
+            },
+            'timeline_data': timeline_data,
+            'growth_areas': growth_areas
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/improve-feedback', methods=['POST'])
+def api_improve_feedback():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+    
+    try:
+        original_feedback = request.form.get('original_feedback')
+        improved_feedback = improve_feedback_writing(original_feedback)
+        
+        return jsonify({
+            'success': True,
+            'improved_feedback': improved_feedback
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/request-feedback', methods=['GET', 'POST'])
+def request_feedback():
+    if 'user_id' not in session or session.get('role') != 'employee':
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    
+    employee = User.query.get(session['user_id'])
+    
+    if request.method == 'POST':
+        if not employee.manager:
+            flash('No manager assigned to send request to', 'error')
+            return redirect(url_for('employee_dashboard'))
+        
+        feedback_request = FeedbackRequest(
+            employee_id=employee.id,
+            manager_id=employee.manager_id,
+            focus_area=request.form.get('focus_area') or None,
+            specific_request=request.form.get('specific_request') or None,
+            priority=request.form.get('priority', 'normal')
+        )
+        
+        db.session.add(feedback_request)
+        db.session.commit()
+        
+        flash('Feedback request sent to your manager!', 'success')
+        return redirect(url_for('employee_dashboard'))
+    
+    # Get previous requests
+    feedback_requests = FeedbackRequest.query.filter_by(employee_id=employee.id).order_by(FeedbackRequest.created_at.desc()).all()
+    
+    return render_template('request_feedback.html', employee=employee, feedback_requests=feedback_requests)

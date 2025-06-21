@@ -41,6 +41,24 @@ class Feedback(db.Model):
     def __repr__(self):
         return f'<Feedback {self.id}>'
 
+class FeedbackRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    manager_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    focus_area = db.Column(db.String(50), nullable=True)
+    specific_request = db.Column(db.Text, nullable=True)
+    priority = db.Column(db.String(20), nullable=False, default='normal')  # 'low', 'normal', 'high'
+    status = db.Column(db.String(20), nullable=False, default='pending')  # 'pending', 'in_progress', 'completed'
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    employee = db.relationship('User', foreign_keys=[employee_id], backref='feedback_requests_made')
+    manager = db.relationship('User', foreign_keys=[manager_id], backref='feedback_requests_received')
+    
+    def __repr__(self):
+        return f'<FeedbackRequest {self.id}>'
+
 def create_default_users():
     """Create default users for testing"""
     # Check if users already exist
@@ -94,3 +112,6 @@ def create_default_users():
     employee3.manager_id = manager2.id
     
     db.session.commit()
+    
+    # Create sample feedback to demonstrate AI features
+    create_sample_feedback()

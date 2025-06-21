@@ -62,9 +62,14 @@
                 <h5 class="card-title mb-0">
                     <i class="fas fa-timeline me-2"></i>Recent Feedback
                 </h5>
-                <a href="{{ url_for('feedback_history', employee_id=employee.id) }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-history me-2"></i>View All
-                </a>
+                <div>
+                    <a href="{{ url_for('request_feedback') }}" class="btn btn-sm btn-success me-2">
+                        <i class="fas fa-hand-paper me-2"></i>Request Feedback
+                    </a>
+                    <a href="{{ url_for('feedback_history', employee_id=employee.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-history me-2"></i>View All
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 {% if feedback_list %}

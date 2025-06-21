@@ -16,6 +16,28 @@
             
             {% if session.user_id %}
             <div class="navbar-nav ms-auto">
+                {% if session.role == 'manager' %}
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-robot me-1"></i>AI Tools
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('ai_suggestions') }}">
+                            <i class="fas fa-lightbulb me-2"></i>Feedback Suggestions
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('feedback_analyzer') }}">
+                            <i class="fas fa-chart-line me-2"></i>Feedback Analyzer
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('feedback_improver') }}">
+                            <i class="fas fa-edit me-2"></i>Improve Writing
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('performance_insights') }}">
+                            <i class="fas fa-brain me-2"></i>Performance Insights
+                        </a></li>
+                    </ul>
+                </div>
+                {% endif %}
                 <span class="navbar-text me-3">
                     <i class="fas fa-user me-1"></i>{{ session.username }} 
                     <span class="badge bg-secondary">{{ session.role.title() }}</span>

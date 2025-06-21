@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Insights - Feedback System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-brain me-2"></i>Performance Insights</h2>
+        <p class="text-muted">AI-generated insights from feedback history and performance trends</p>
+    </div>
+</div>
+
+{% if session.role == 'manager' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Select Team Member</h5>
+            </div>
+            <div class="card-body">
+                <form id="insightsForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <select class="form-select" id="employee_id" name="employee_id" required>
+                                <option value="">Select a team member...</option>
+                                {% for member in team_members %}
+                                <option value="{{ member.id }}">{{ member.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-chart-line me-2"></i>Generate Insights
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div id="insights-container" class="row" style="display: none;">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>AI Performance Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="insights-content">
+                    <!-- AI insights will appear here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Feedback Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="feedbackTrendChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Key Metrics</h5>
+            </div>
+            <div class="card-body">
+                <div id="metrics-content">
+                    <!-- Metrics will appear here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Growth Areas</h5>
+            </div>
+            <div class="card-body">
+                <div id="growth-areas">
+                    <!-- Growth areas will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loading" class="text-center mt-4" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Generating insights...</span>
+    </div>
+    <p class="mt-2">AI is analyzing performance data...</p>
+</div>
+
+{% if session.role == 'employee' %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-user-clock fa-3x text-muted mb-3"></i>
+                <h5>Your Personal Insights</h5>
+                <p class="text-muted">Loading your performance insights...</p>
+                <button id="loadPersonalInsights" class="btn btn-primary">
+                    <i class="fas fa-refresh me-2"></i>Load My Insights
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+{% if session.role == 'manager' %}
+document.getElementById('insightsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    await generateInsights();
+});
+{% endif %}
+
+{% if session.role == 'employee' %}
+document.getElementById('loadPersonalInsights').addEventListener('click', async function() {
+    await generateInsights();
+});
+{% endif %}
+
+async function generateInsights() {
+    const loading = document.getElementById('loading');
+    const container = document.getElementById('insights-container');
+    
+    loading.style.display = 'block';
+    container.style.display = 'none';
+    
+    try {
+        const employeeId = {% if session.role == 'employee' %}{{ session.user_id }}{% else %}document.getElementById('employee_id').value{% endif %};
+        
+        const response = await fetch('/api/performance-insights', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ employee_id: employeeId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Display insights
+            document.getElementById('insights-content').innerHTML = data.insights.replace(/\n/g, '<br>');
+            
+            // Display metrics
+            const metricsHtml = `
+                <div class="text-center mb-3">
+                    <h4 class="text-primary">${data.metrics.total_feedback}</h4>
+                    <small class="text-muted">Total Feedback</small>
+                </div>
+                <div class="text-center mb-3">
+                    <h4 class="text-${data.metrics.avg_sentiment === 'positive' ? 'success' : data.metrics.avg_sentiment === 'negative' ? 'danger' : 'warning'}">${data.metrics.avg_sentiment}</h4>
+                    <small class="text-muted">Average Sentiment</small>
+                </div>
+                <div class="text-center">
+                    <h4 class="text-info">${data.metrics.improvement_trend}</h4>
+                    <small class="text-muted">Trend</small>
+                </div>
+            `;
+            document.getElementById('metrics-content').innerHTML = metricsHtml;
+            
+            // Display growth areas
+            const growthHtml = data.growth_areas.map(area => 
+                `<span class="badge bg-light text-dark me-1 mb-1">${area}</span>`
+            ).join('');
+            document.getElementById('growth-areas').innerHTML = growthHtml;
+            
+            // Create trend chart
+            createTrendChart(data.timeline_data);
+            
+            container.style.display = 'block';
+        } else {
+            alert('Failed to generate insights: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error generating insights: ' + error.message);
+    } finally {
+        loading.style.display = 'none';
+    }
+}
+
+function createTrendChart(timelineData) {
+    const ctx = document.getElementById('feedbackTrendChart');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timelineData.dates,
+            datasets: [{
+                label: 'Sentiment Score',
+                data: timelineData.scores,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        color: '#ffffff'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#ffffff'
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
