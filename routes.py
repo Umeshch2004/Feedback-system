@@ -65,11 +65,14 @@ def manager_dashboard():
         })
     
     # Get sentiment distribution
-    sentiment_data = db.session.query(
+    sentiment_query = db.session.query(
         Feedback.sentiment, func.count(Feedback.id)
     ).filter(
         Feedback.manager_id == manager.id
     ).group_by(Feedback.sentiment).all()
+    
+    # Convert to serializable format
+    sentiment_data = [(row[0], row[1]) for row in sentiment_query]
     
     return render_template('manager_dashboard.html', 
                          manager=manager, 
@@ -87,11 +90,14 @@ def employee_dashboard():
     feedback_list = Feedback.query.filter_by(employee_id=employee.id).order_by(Feedback.created_at.desc()).all()
     
     # Get sentiment distribution for this employee
-    sentiment_data = db.session.query(
+    sentiment_query = db.session.query(
         Feedback.sentiment, func.count(Feedback.id)
     ).filter(
         Feedback.employee_id == employee.id
     ).group_by(Feedback.sentiment).all()
+    
+    # Convert to serializable format
+    sentiment_data = [(row[0], row[1]) for row in sentiment_query]
     
     return render_template('employee_dashboard.html', 
                          employee=employee, 
@@ -219,18 +225,21 @@ def sentiment_data():
     
     if user.role == 'manager':
         # Get sentiment data for all team members
-        sentiment_data = db.session.query(
+        sentiment_query = db.session.query(
             Feedback.sentiment, func.count(Feedback.id)
         ).filter(
             Feedback.manager_id == user.id
         ).group_by(Feedback.sentiment).all()
     else:
         # Get sentiment data for this employee
-        sentiment_data = db.session.query(
+        sentiment_query = db.session.query(
             Feedback.sentiment, func.count(Feedback.id)
         ).filter(
             Feedback.employee_id == user.id
         ).group_by(Feedback.sentiment).all()
+    
+    # Convert to serializable format
+    sentiment_data = [(row[0], row[1]) for row in sentiment_query]
     
     result = {
         'labels': [item[0].title() for item in sentiment_data],
