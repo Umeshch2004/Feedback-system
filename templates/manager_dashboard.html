@@ -128,7 +128,7 @@
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 <script>
     // Initialize sentiment chart
-    const sentimentData = {{ sentiment_data | tojsonfilter | safe }};
+    const sentimentData = {{ sentiment_data | tojson | safe }};
     initSentimentChart(sentimentData);
 </script>
 {% endblock %}
