@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Feedback - Feedback System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Edit Feedback for {{ feedback.employee.username }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="feedbackForm">
+                    <div class="mb-3">
+                        <label for="strengths" class="form-label">
+                            <i class="fas fa-star text-success me-2"></i>Strengths
+                        </label>
+                        <textarea class="form-control" id="strengths" name="strengths" rows="4" required>{{ feedback.strengths }}</textarea>
+                        <div class="form-text">Be specific and provide examples where possible.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="areas_to_improve" class="form-label">
+                            <i class="fas fa-arrow-up text-info me-2"></i>Areas to Improve
+                        </label>
+                        <textarea class="form-control" id="areas_to_improve" name="areas_to_improve" rows="4" required>{{ feedback.areas_to_improve }}</textarea>
+                        <div class="form-text">Frame suggestions constructively and provide actionable guidance.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="sentiment" class="form-label">
+                                    <i class="fas fa-smile me-2"></i>Overall Sentiment
+                                </label>
+                                <select class="form-select" id="sentiment" name="sentiment" required>
+                                    <option value="positive" {% if feedback.sentiment == 'positive' %}selected{% endif %}>Positive</option>
+                                    <option value="neutral" {% if feedback.sentiment == 'neutral' %}selected{% endif %}>Neutral</option>
+                                    <option value="negative" {% if feedback.sentiment == 'negative' %}selected{% endif %}>Needs Attention</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tags" class="form-label">
+                                    <i class="fas fa-tags me-2"></i>Tags (Optional)
+                                </label>
+                                <input type="text" class="form-control" id="tags" name="tags" 
+                                       value="{{ feedback.tags or '' }}" 
+                                       placeholder="e.g., communication, leadership, teamwork">
+                                <div class="form-text">Separate tags with commas.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Editing this feedback will update the timestamp and notify the employee.
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('feedback_history', employee_id=feedback.employee_id) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Update Feedback
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Dashboard - Feedback System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-user me-2"></i>Employee Dashboard</h2>
+        <p class="text-muted">Welcome, {{ employee.username }}! View your feedback and progress here.</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Your Feedback Sentiment
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="sentimentChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Quick Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col">
+                        <h4 class="text-primary">{{ feedback_list|length }}</h4>
+                        <small class="text-muted">Total Feedback</small>
+                    </div>
+                    <div class="col">
+                        <h4 class="text-warning">{{ feedback_list|selectattr('acknowledged', 'equalto', False)|list|length }}</h4>
+                        <small class="text-muted">Unacknowledged</small>
+                    </div>
+                    <div class="col">
+                        {% if employee.manager %}
+                        <h6 class="text-success">{{ employee.manager.username }}</h6>
+                        <small class="text-muted">Your Manager</small>
+                        {% else %}
+                        <h6 class="text-muted">No Manager</h6>
+                        <small class="text-muted">Assigned</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-timeline me-2"></i>Recent Feedback
+                </h5>
+                <a href="{{ url_for('feedback_history', employee_id=employee.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-history me-2"></i>View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if feedback_list %}
+                <div class="timeline">
+                    {% for feedback in feedback_list[:5] %}
+                    <div class="card mb-3 {% if not feedback.acknowledged %}border-warning{% endif %}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ feedback.manager.username }}</strong>
+                                <span class="badge bg-{{ 'success' if feedback.sentiment == 'positive' else 'warning' if feedback.sentiment == 'neutral' else 'danger' }}">
+                                    {{ feedback.sentiment.title() }}
+                                </span>
+                                {% if not feedback.acknowledged %}
+                                <span class="badge bg-warning">New</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">{{ feedback.created_at.strftime('%B %d, %Y at %I:%M %p') }}</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-success">
+                                        <i class="fas fa-star me-2"></i>Strengths
+                                    </h6>
+                                    <p class="small">{{ feedback.strengths }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-info">
+                                        <i class="fas fa-arrow-up me-2"></i>Areas to Improve
+                                    </h6>
+                                    <p class="small">{{ feedback.areas_to_improve }}</p>
+                                </div>
+                            </div>
+                            {% if feedback.tags %}
+                            <div class="mt-2">
+                                <strong>Tags:</strong>
+                                {% for tag in feedback.tags.split(',') %}
+                                <span class="badge bg-secondary me-1">{{ tag.strip() }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="mt-3 d-flex justify-content-between align-items-center">
+                                {% if not feedback.acknowledged %}
+                                <form method="POST" action="{{ url_for('acknowledge_feedback', feedback_id=feedback.id) }}" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check me-2"></i>Acknowledge
+                                    </button>
+                                </form>
+                                {% else %}
+                                <small class="text-success">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Acknowledged on {{ feedback.acknowledged_at.strftime('%B %d, %Y') }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No feedback yet</h5>
+                    <p class="text-muted">Your manager hasn't provided any feedback yet. Check back later!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Initialize sentiment chart
+    const sentimentData = {{ sentiment_data | tojsonfilter | safe }};
+    initSentimentChart(sentimentData);
+</script>
+{% endblock %}
